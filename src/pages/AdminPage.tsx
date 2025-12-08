@@ -6,69 +6,147 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '../components/ui/table';
+import { supabase } from '@/integrations/supabase/client';
+import { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { useToast } from '@/hooks/use-toast';
 
-interface Formation {
-  id: string;
-  title: string;
-  description: string;
-  duration: string;
-  students: string;
-  modules: string;
-}
+type Formation = Tables<'formations'>;
 
 const AdminPage: React.FC = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [formations, setFormations] = useState<Formation[]>([]);
   const [newFormationTitle, setNewFormationTitle] = useState('');
   const [newFormationDescription, setNewFormationDescription] = useState('');
   const [newFormationDuration, setNewFormationDuration] = useState('');
   const [newFormationStudents, setNewFormationStudents] = useState('');
   const [newFormationModules, setNewFormationModules] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated');
-    if (isAuthenticated !== 'true') {
-      navigate('/login');
-    }
-    loadFormations();
-  }, [navigate]);
+    const checkAuthAndFetch = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  const loadFormations = () => {
-    const storedFormations = localStorage.getItem('formations');
-    if (storedFormations) {
-      setFormations(JSON.parse(storedFormations));
-    }
-  };
+      if (sessionError || !session) {
+        console.error("No active Supabase session:", sessionError);
+        localStorage.removeItem('isAuthenticated'); // Clear local storage if session is invalid
+        navigate('/login');
+        return;
+      }
 
-  const saveFormations = (updatedFormations: Formation[]) => {
-    localStorage.setItem('formations', JSON.stringify(updatedFormations));
-    setFormations(updatedFormations);
-  };
+      // If session is valid, proceed with fetching formations
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase
+        .from('formations')
+        .select('*')
+        .order('created_at', { ascending: true });
 
-  const handleAddFormation = (e: React.FormEvent) => {
+      if (error) {
+        console.error("Error fetching formations in AdminPage:", error);
+        setError("Failed to load formations.");
+        setFormations([]);
+        toast({
+          title: "Erreur",
+          description: "Échec du chargement des formations.",
+          variant: "destructive",
+        });
+      } else {
+        console.log("Formations fetched in AdminPage:", data); // Log fetched data
+        setFormations(data || []);
+      }
+      setLoading(false);
+    };
+
+    checkAuthAndFetch();
+
+    const channel = supabase
+      .channel('admin_formations_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'formations' }, (payload) => {
+        console.log('Admin: Change received!', payload);
+        checkAuthAndFetch(); // Re-fetch data on any change
+      })
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [navigate, toast]);
+
+  const handleAddFormation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newFormationTitle.trim() && newFormationDescription.trim() && newFormationDuration.trim() && newFormationStudents.trim() && newFormationModules.trim()) {
-      const newFormation: Formation = {
-        id: Date.now().toString(),
+    if (newFormationTitle.trim() && newFormationDescription.trim()) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Vous devez être connecté pour ajouter une formation.",
+          variant: "destructive",
+        });
+        navigate('/login'); // Redirect to login if not authenticated
+        return;
+      }
+
+      const newFormation: TablesInsert<'formations'> = {
         title: newFormationTitle,
         description: newFormationDescription,
-        duration: newFormationDuration,
-        students: newFormationStudents,
-        modules: newFormationModules,
+        duration: newFormationDuration.trim() || null,
+        students: newFormationStudents.trim() || null,
+        modules: newFormationModules.trim() || null,
       };
-      const updatedFormations = [...formations, newFormation];
-      saveFormations(updatedFormations);
-      setNewFormationTitle('');
-      setNewFormationDescription('');
-      setNewFormationDuration('');
-      setNewFormationStudents('');
-      setNewFormationModules('');
+
+      const { data, error } = await supabase
+        .from('formations')
+        .insert(newFormation)
+        .select(); // Select the inserted data to log it
+
+      if (error) {
+        console.error("Error adding formation:", error); // Log the full error object
+        toast({
+          title: "Erreur",
+          description: `Échec de l'ajout de la formation: ${error.message}`,
+          variant: "destructive",
+        });
+      } else {
+        console.log("Formation added successfully:", data); // Log the inserted data
+        toast({
+          title: "Succès",
+          description: "Formation ajoutée avec succès.",
+        });
+        setNewFormationTitle('');
+        setNewFormationDescription('');
+        setNewFormationDuration('');
+        setNewFormationStudents('');
+        setNewFormationModules('');
+      }
+    } else {
+        toast({
+          title: "Attention",
+          description: "Veuillez remplir au moins le titre et la description.",
+        });
     }
   };
 
-  const handleDeleteFormation = (id: string) => {
-    const updatedFormations = formations.filter((formation) => formation.id !== id);
-    saveFormations(updatedFormations);
+  const handleDeleteFormation = async (id: string) => {
+    const { error } = await supabase
+      .from('formations')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error("Error deleting formation:", error);
+      toast({
+        title: "Erreur",
+        description: "Échec de la suppression de la formation.",
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Succès",
+        description: "Formation supprimée avec succès.",
+      });
+    }
   };
 
   const handleLogout = () => {

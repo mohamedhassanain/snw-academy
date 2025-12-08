@@ -1,46 +1,74 @@
-import { motion } from "framer-motion";
-import { useInView } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Clock, Users, BookOpen, ArrowRight } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
 
-interface Formation {
-  id: string;
-  title: string;
-  description: string;
-  duration?: string;
-  students?: string;
-  modules?: string;
-  gradient?: string;
-}
+type Formation = Tables<'formations'>;
 
 export const FormationsSection = () => {
   const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
+  // const isInView = useInView(ref, { once: true, margin: "-100px" }); // Removed framer-motion hook
   const [formations, setFormations] = useState<Formation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchFormations = () => {
-      const storedFormations = localStorage.getItem('formations');
-      if (storedFormations) {
-        setFormations(JSON.parse(storedFormations));
+    const fetchFormations = async () => {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase
+        .from('formations')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error("Error fetching formations in FormationsSection:", error);
+        setError("Failed to load formations.");
+        setFormations([]);
       } else {
-        setFormations([]); // Display only admin-added formations, so empty if none stored
+        console.log("Formations fetched in FormationsSection:", data); // Log fetched data
+        setFormations(data || []);
       }
+      setLoading(false);
     };
 
-    fetchFormations(); // Initial load
+    fetchFormations();
 
-    const handleStorageChange = () => {
-      fetchFormations(); // Reload on localStorage change
-    };
-
-    window.addEventListener('storage', handleStorageChange);
+    const channel = supabase
+      .channel('formations_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'formations' }, (payload) => {
+        console.log('Change received!', payload);
+        fetchFormations(); // Re-fetch data on any change
+      })
+      .subscribe();
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      channel.unsubscribe();
     };
   }, []);
+
+  if (loading) {
+    return (
+      <section id="formations" className="py-24 relative">
+        <div className="absolute inset-0 bg-secondary/30" />
+        <div className="container mx-auto px-4 relative text-center text-muted-foreground">
+          Chargement des formations...
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section id="formations" className="py-24 relative">
+        <div className="absolute inset-0 bg-secondary/30" />
+        <div className="container mx-auto px-4 relative text-center text-destructive">
+          Erreur: {error}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section id="formations" className="py-24 relative">
@@ -48,12 +76,7 @@ export const FormationsSection = () => {
       <div className="absolute inset-0 bg-secondary/30" />
 
       <div className="container mx-auto px-4 relative" ref={ref}>
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={isInView ? { opacity: 1, y: 0 } : {}}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-16"
-        >
+        <div className="text-center mb-16">
           <span className="text-primary font-medium tracking-widest uppercase text-sm">
             Nos Formations
           </span>
@@ -65,15 +88,12 @@ export const FormationsSection = () => {
             Des parcours de formation complets et reconnus pour vous préparer
             aux métiers de la santé et du social.
           </p>
-        </motion.div>
+        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {formations.map((formation, index) => (
-            <motion.div
-              key={formation.title}
-              initial={{ opacity: 0, y: 40 }}
-              animate={isInView ? { opacity: 1, y: 0 } : {}}
-              transition={{ duration: 0.6, delay: index * 0.15 }}
+            <div
+              key={formation.id}
               className="group"
             >
               <div
@@ -129,21 +149,16 @@ export const FormationsSection = () => {
                   </Button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 
         {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="text-center mt-12"
-        >
+        <div className="text-center mt-12">
           <Button variant="gold" size="lg">
             Voir toutes les formations
           </Button>
-        </motion.div>
+        </div>
       </div>
     </section>
   );

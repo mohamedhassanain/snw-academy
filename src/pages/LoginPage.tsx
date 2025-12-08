@@ -4,22 +4,43 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Label } from '../components/ui/label';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const LoginPage: React.FC = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState(''); // Changed from username to email for Supabase auth
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Static authentication for demonstration purposes
-    if (username === 'admin' && password === 'admin') {
-      localStorage.setItem('isAuthenticated', 'true');
-      navigate('/admin');
+    setLoading(true);
+    setError('');
+
+    const { error: authError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+
+    if (authError) {
+      setError(authError.message);
+      toast({
+        title: "Erreur de connexion",
+        description: authError.message,
+        variant: "destructive",
+      });
     } else {
-      setError('Invalid username or password');
+      localStorage.setItem('isAuthenticated', 'true'); // Keep for now, but Supabase session is primary
+      navigate('/admin');
+      toast({
+        title: "Connexion réussie",
+        description: "Vous êtes connecté à l'interface d'administration.",
+      });
     }
+    setLoading(false);
   };
 
   return (
@@ -32,14 +53,14 @@ const LoginPage: React.FC = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="grid gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="admin"
+                id="email"
+                type="email"
+                placeholder="admin@example.com"
                 required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
@@ -54,15 +75,13 @@ const LoginPage: React.FC = () => {
               />
             </div>
             {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Connexion..." : "Login"}
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Default credentials: admin/admin
-          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">  </p>
         </CardFooter>
       </Card>
     </div>

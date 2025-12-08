@@ -157,6 +157,25 @@ export const ContactSection = () => {
                 </a>
               </Button>
             </div>
+
+            {/* Instagram Social/Additional info */}
+            <div className="mt-8 p-6 rounded-xl bg-primary/5 border border-primary/20">
+              <h4 className="font-display text-lg text-foreground mb-2">
+                Suivez-nous sur Instagram
+              </h4>
+              <p className="text-muted-foreground text-sm mb-4">
+                Découvrez nos dernières actualités et moments forts.
+              </p>
+              <Button variant="outline" size="sm" asChild>
+                <a
+                  href="https://www.instagram.com/snw_academy/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  SNW Academy sur Instagram
+                </a>
+              </Button>
+            </div>
           </motion.div>
         </div>
       </div>

@@ -1,17 +1,15 @@
 import { motion } from "framer-motion";
 import snwLogo from "@/assets/snw-logo.jpg";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+
+type Formation = Tables<'formations'>;
 
 interface FormationLink {
   id: string;
   label: string;
   href: string;
-}
-
-interface StoredFormation {
-  id: string;
-  title: string;
-  description: string;
 }
 
 const academyLinks = [
@@ -24,26 +22,31 @@ export const Footer = () => {
   const [formations, setFormations] = useState<FormationLink[]>([]);
 
   useEffect(() => {
-    const fetchFormations = () => {
-      const storedFormations = localStorage.getItem('formations');
-      if (storedFormations) {
-        const parsedStoredFormations: StoredFormation[] = JSON.parse(storedFormations);
-        setFormations(parsedStoredFormations.map(f => ({ id: f.id, label: f.title, href: "#formations" })));
-      } else {
+    const fetchFormations = async () => {
+      const { data, error } = await supabase
+        .from('formations')
+        .select('id, title');
+
+      if (error) {
+        console.error("Error fetching formations for footer:", error);
         setFormations([]);
+      } else {
+        setFormations(data.map(f => ({ id: f.id, label: f.title, href: "#formations" })) || []);
       }
     };
 
     fetchFormations();
 
-    const handleStorageChange = () => {
-      fetchFormations();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
+    const channel = supabase
+      .channel('formations_footer_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'formations' }, (payload) => {
+        console.log('Footer: Change received!', payload);
+        fetchFormations(); // Re-fetch data on any change
+      })
+      .subscribe();
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
+      channel.unsubscribe();
     };
   }, []);
   return (
