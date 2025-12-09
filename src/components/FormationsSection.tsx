@@ -12,6 +12,7 @@ export const FormationsSection = () => {
   const [formations, setFormations] = useState<Formation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showAllFormations, setShowAllFormations] = useState(false); // New state for showing all formations
 
   useEffect(() => {
     const fetchFormations = async () => {
@@ -47,6 +48,8 @@ export const FormationsSection = () => {
       channel.unsubscribe();
     };
   }, []);
+
+  const displayedFormations = showAllFormations ? formations : formations.slice(0, 3);
 
   if (loading) {
     return (
@@ -91,7 +94,7 @@ export const FormationsSection = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {formations.map((formation, index) => (
+          {displayedFormations.map((formation, index) => (
             <div
               key={formation.id}
               className="group"
@@ -154,11 +157,13 @@ export const FormationsSection = () => {
         </div>
 
         {/* CTA */}
-        <div className="text-center mt-12">
-          <Button variant="gold" size="lg">
-            Voir toutes les formations
-          </Button>
-        </div>
+        {formations.length > 3 && (
+          <div className="text-center mt-12">
+            <Button variant="gold" size="lg" onClick={() => setShowAllFormations(!showAllFormations)}>
+              {showAllFormations ? "Voir moins" : "Voir toutes les formations"}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );
