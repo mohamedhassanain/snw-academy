@@ -9,6 +9,8 @@ const contactInfo = [
     icon: MapPin,
     title: "Adresse",
     content: "Morocco, Casablanca, 34 el rahal meskinni, Casablanca, Morocco",
+    wazeLink: "https://waze.com/ul?q=34%20el%20rahal%20meskinni%2C%20Casablanca%2C%20Morocco&navigate=yes",
+    googleMapsLink: "https://www.google.com/maps/search/?api=1&query=34%20el%20rahal%20meskinni%2C%20Casablanca%2C%20Morocco",
   },
   {
     icon: Phone,
@@ -131,9 +133,37 @@ export const ContactSection = () => {
                     <h4 className="font-medium text-foreground mb-1">
                       {info.title}
                     </h4>
-                    <p className="text-muted-foreground text-sm break-words w-full">
-                      {info.content}
-                    </p>
+                    {info.wazeLink || info.googleMapsLink ? (
+                      <div className="flex flex-col">
+                        <p className="text-muted-foreground text-sm break-words w-full mb-2">
+                          {info.content}
+                        </p>
+                        {info.wazeLink && (
+                          <a
+                            href={info.wazeLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary text-xs hover:underline mb-1"
+                          >
+                            Ouvrir avec Waze
+                          </a>
+                        )}
+                        {info.googleMapsLink && (
+                          <a
+                            href={info.googleMapsLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary text-xs hover:underline"
+                          >
+                            Ouvrir avec Google Maps
+                          </a>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-sm break-words w-full">
+                        {info.content}
+                      </p>
+                    )}
                   </div>
                 </motion.div>
               ))}
