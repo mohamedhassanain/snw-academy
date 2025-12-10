@@ -143,13 +143,20 @@ export const FormationsSection = () => {
                     </div>
                   )}
 
-                  <Button
-                    variant="outline"
-                    className="w-full group/btn"
+                  <a
+                    href={`https://wa.me/212704784731?text=Je suis intéressé(e) par la formation: ${formation.title}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full"
                   >
-                    En savoir plus
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
-                  </Button>
+                    <Button
+                      variant="outline"
+                      className="w-full group/btn"
+                    >
+                      En savoir plus
+                      <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+                    </Button>
+                  </a>
                 </div>
               </div>
             </div>
