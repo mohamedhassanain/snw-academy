@@ -26,12 +26,14 @@ const contactInfo = [
     icon: Clock,
     title: "Horaires",
     content: "du Lundi au Vendredi, 9h - 18h",
+    whatsappBooking: "Bonjour, je souhaite prendre rendez-vous pour une formation le week-end (Samedi ou Dimanche).",
   },
 ];
 
 // Numéro WhatsApp - remplacez par le vrai numéro
 const WHATSAPP_NUMBER = "212704784731";
 const WHATSAPP_MESSAGE = "Bonjour, je souhaite avoir plus d'informations sur vos formations.";
+const WHATSAPP_BOOKING_MESSAGE = "Bonjour, je souhaite prendre rendez-vous pour une formation le week-end (Samedi ou Dimanche).";
 
 export const ContactSection = () => {
   const ref = useRef(null);
@@ -133,7 +135,7 @@ export const ContactSection = () => {
                     <h4 className="font-medium text-foreground mb-1">
                       {info.title}
                     </h4>
-                    {info.wazeLink || info.googleMapsLink ? (
+                    {info.wazeLink || info.googleMapsLink || info.whatsappBooking ? (
                       <div className="flex flex-col">
                         <p className="text-muted-foreground text-sm break-words w-full mb-2">
                           {info.content}
@@ -153,9 +155,20 @@ export const ContactSection = () => {
                             href={info.googleMapsLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary text-xs hover:underline"
+                            className="text-primary text-xs hover:underline mb-1"
                           >
                             Ouvrir avec Google Maps
+                          </a>
+                        )}
+                        {info.whatsappBooking && (
+                          <a
+                            href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(info.whatsappBooking)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary text-xs hover:underline flex items-center gap-1"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            Réserver un horaire (Week-end)
                           </a>
                         )}
                       </div>
